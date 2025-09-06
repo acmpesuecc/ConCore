@@ -1,0 +1,122 @@
+Objective
+ - Cut down grunt work , the user will merely have to raise a request and direct it if they wish to
+ - For Data-analysis
+ - descritptive statistics
+ - visualizations
+ - inferential statistics from context (user provided + browsing)
+ - All of the above done synthetically - with near 0 human interference
+
+Architecture
+ - Models 
+    - Gemini - for mvp
+    - RL-Env Finetuned 27B model if i find good outputs
+
+ - ContextEngine
+    - label facts and important datapoints
+    - raw-data-structure --> (a table stored with the attributes with units and population and overral descritption of the data) and of course link this to the raw-data
+    - context --> Whatever subjective information is given regarding a situation <linking articles or analysis to a certain data point (date and location)>
+    - requests --> previous requests and their corresponding response
+    - scritps --> scripts pertaining to a request
+    - results --> raw-data-structure basically all the mentioned variables can be added to another fresh dataset if needed
+    - many more .....
+
+ - CoTAS
+    - Chain of Thought Action and Search
+    - Thought - the usual
+    - Action - Creating a script , analyzing its results - Creating visualizations - Identifying patterns etc
+    - Search - Hunting for Specific Context <'what happened in the oil markets on 2nd july 2025' kinda questions > and using thought to assosciate that to some change.
+    - Not linking it to a specific workflow but instead giving the llm free flow over the above restricted tool collection in any order till desired output is met
+
+ - File Support
+    - the user must be able to upload a wide variety of files both Context and raw-data
+    - MVP - support xls , csv , json , pdf and sql
+
+ - Clarify
+    - Applications for this include high risk industries
+    - its important for the model to request for clarification of clearly say no whenever needed
+
+Front-End-Design
+ - Chat primarily
+ - Context widget on the right
+ - File viewing widget on the right
+ - Script execution on the right - the code should be printed and an execution button on top
+ - Widgets must be naturally appearing
+ - the flow must be i must click on a button that either comes as a button in the chatwindow or on the ContextWidegt to open the file viewing and script execution
+ - the context widget must be hideable - upon clicking a button it can be hid or seen
+
+--- llm added ---
+ - Execution
+    - Subprocess-based execution for MVP
+    - Supports pandas, numpy, matplotlib
+    - Resource limits: timeout + memory cap
+    - Captures:
+       - stdout, stderr
+       - structured stats (JSON)
+       - visualizations (PNG)
+       - transformed data (CSV)
+    - Sandbox prevents unsafe OS/network calls
+    - Upgrade path: Dockerized execution for stronger isolation
+
+ - Free-Flow CoTAS
+    - Iterative loop: Thought → Action → Inspect → Repeat
+    - Cap iterations (e.g. max 5 loops per request)
+    - Stop conditions:
+       - LLM outputs "done"
+       - Iteration limit reached
+       - Clarification required
+    - Allowed tools in MVP: pandas, numpy, matplotlib only
+    - Produces standardized outputs each step
+
+ - Clarify (extension)
+    - Safety layer before final outputs
+    - LLM requests missing context or says "no" if uncertain
+    - Enforced in high-risk contexts (finance, healthcare, etc.)
+    - Integrated at last stage of MVP
+
+ - Context Persistence
+    - After every iteration, LLM returns structured JSON:
+        {
+          "thought": "...",
+          "action": "...",
+          "store": {
+            "facts": [...],
+            "context": [...],
+            "scripts": [...],
+            "results": [...]
+          }
+        }
+    - Backend validates JSON
+    - Automatically saves into ContextEngine buckets
+    - Ensures nothing worth storing is lost
+
+ - Artifacts
+    - Standard folder convention per request:
+       - /facts/ → extracted numerical/statistical facts (JSON)
+       - /raw-data/ → dataset schema & metadata
+       - /scripts/ → generated Python code
+       - /results/ → plots (PNG), tables (CSV), logs
+       - /reports/ → final summaries (Markdown/text)
+    - Ensures reproducibility and auditability
+
+ - LLM ↔ ContextEngine Interaction
+    - LLM queries ContextEngine for prior facts, scripts, results
+    - New context is appended automatically after each iteration
+    - Requests/responses are logged for traceability
+    - ContextEngine acts as persistent memory for all operations
+
+ - Front-End (MVP)
+    - HTML + CSS + Vanilla JS (minimal overhead)
+    - Layout:
+       - Chat window (center, ~70%)
+       - Sidebar (right, ~30%) → toggleable
+    - Sidebar Widgets (only one active at a time):
+       - Context viewer (default)
+       - File viewer (triggered via button in chat/context)
+       - Script viewer & executor (shows code + "Run" button)
+    - User Flow:
+       - LLM outputs buttons in chat ("View File", "Run Script")
+       - Clicking button opens corresponding sidebar widget
+       - Execution results returned inline or stored in context
+    - Sidebar controls:
+       - Toggle show/hide
+       - Switch between context/file/script widgets
