@@ -388,6 +388,64 @@ Architecture
                               }
 
     - many more .....
+    - RULES for Context Engine - v0
+    ContextEngine Rules for Each Sub-Type
+      1. datasets
+
+      Auto-assign unique ID (dataset_001, dataset_002...)
+      Extract all column metadata with types, descriptions, units, ranges
+      Track relationships between datasets (joins, derivations)
+      Monitor quality metrics (completeness, accuracy, freshness)
+      Store source information and creation timestamps
+
+      2. facts
+
+      Maximum detail retention - statistical values, calculations, confidence
+      Link to source datasets and specific attributes used
+      Include comparative context (peer comparisons, benchmarks, trends)
+      Store statistical significance metrics and validation results
+      Track extraction metadata and relationship mappings
+
+      3. context
+
+      Store situational information from user input or reliable external sources
+      Assign relevance and confidence scores for each context
+      Link to applicable datasets, facts, and requests
+      Include quantitative and qualitative impact factors
+      Track validation status and source credibility
+
+      4. requests
+
+      Capture complete user query with intent classification
+      Track data requirements and analysis scope
+      Store processing metadata and complexity scores
+      Link to all generated entities (facts, scripts, results)
+      Maintain user context and session information
+
+      5. scripts
+
+      Store complete executable code with dependencies
+      Track execution metadata (timing, status, version)
+      Include parameter configurations and validation results
+      Monitor performance metrics and optimization scores
+      Link to triggering requests and generated results
+
+      6. results
+
+      Capture complete output data from script execution
+      Include quality assessment and validation metrics
+      Store output artifacts and visualization references
+      Track reusability and relationship mappings
+      Monitor computational performance details
+
+      7. conversation
+
+      Header defaults to previous conv_id (conv_n-1)
+      Link to single request-response pair per conversation node
+      Track all entities used (datasets, scripts, contexts)
+      Assign main topic for easy retrieval
+      Maintain chronological timestamps for session flow
+      RetryClaude does not have the ability to run the code it generates yet.Claude can make mistakes. Please double-check responses.
 
  - CoTAS
     - Chain of Thought Action and Search
