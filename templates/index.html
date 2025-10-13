@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConCore</title>
+    <link rel="stylesheet" href="static/styles.css">
+    <!-- Markdown rendering library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/9.1.2/marked.min.js"></script>
+    <!-- Syntax highlighting for code blocks -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <style>
+        /* Additional styles for markdown content */
+        .message-content h1, .message-content h2, .message-content h3 {
+            margin: 16px 0 8px 0;
+            font-weight: 600;
+        }
+        
+        .message-content h1 { font-size: 1.5em; }
+        .message-content h2 { font-size: 1.3em; }
+        .message-content h3 { font-size: 1.1em; }
+        
+        .message-content p {
+            margin: 8px 0;
+            line-height: 1.6;
+        }
+        
+        .message-content ul, .message-content ol {
+            margin: 8px 0;
+            padding-left: 20px;
+        }
+        
+        .message-content li {
+            margin: 4px 0;
+        }
+        
+        .message-content code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+        }
+        
+        .message-content pre {
+            background: #f8f8f8;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 12px 0;
+            overflow-x: auto;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.9em;
+        }
+        
+        .message-content pre code {
+            background: none;
+            padding: 0;
+            border-radius: 0;
+        }
+        
+        .message-content blockquote {
+            border-left: 4px solid #c17a54;
+            margin: 12px 0;
+            padding: 8px 16px;
+            background: #fafafa;
+            font-style: italic;
+        }
+        
+        .message-content table {
+            border-collapse: collapse;
+            margin: 12px 0;
+            width: 100%;
+            font-size: 0.9em;
+        }
+        
+        .message-content th, .message-content td {
+            border: 1px solid #e5e5e5;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        
+        .message-content th {
+            background: #f8f8f8;
+            font-weight: 600;
+        }
+        
+        .message-content a {
+            color: #c17a54;
+            text-decoration: none;
+        }
+        
+        .message-content a:hover {
+            text-decoration: underline;
+        }
+        
+        .message-content strong {
+            font-weight: 600;
+        }
+        
+        .message-content em {
+            font-style: italic;
+        }
+        
+        .message-content hr {
+            border: none;
+            border-top: 1px solid #e5e5e5;
+            margin: 20px 0;
+        }
+        
+        /* User messages should keep simple styling */
+        .message-user .message-content h1,
+        .message-user .message-content h2,
+        .message-user .message-content h3,
+        .message-user .message-content p {
+            margin: 4px 0;
+        }
+        
+        .message-user .message-content code {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .message-user .message-content pre {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">ConCore</div>
+    </div>
+
+    <div class="chat-container">
+        <div class="messages-area" id="messagesArea">
+            <div class="welcome-message">
+                <h2>Welcome to ConCore</h2>
+                <p>Choose your AI model and start chatting. **Markdown** *formatting* is supported!</p>
+            </div>
+        </div>
+
+        <div class="loading-indicator" id="loadingIndicator">
+            Thinking...
+        </div>
+
+        <div class="input-area">
+            <div id="filePreviewContainer"></div>
+            <div class="input-controls">
+                <div class="file-attachment" title="Attach file">
+                    <input 
+                        type="file" 
+                        id="fileInput" 
+                        accept=".json,.csv,.xlsx,.xls,.db,.sqlite"
+                        multiple
+                    >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66L9.64 16.2a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                    </svg>
+                </div>
+                <textarea 
+                    id="messageInput" 
+                    class="message-input" 
+                    placeholder="Message ConCore... (Markdown supported)" 
+                    rows="1"
+                ></textarea>
+            </div>
+            <div class="input-bottom">
+                <div class="model-selector">
+                    <div class="api-key-container">
+                        <div class="api-status" id="apiStatus"></div>
+                        <span class="api-key-label" id="apiKeyLabel">OpenAI Key:</span>
+                        <input 
+                            type="password" 
+                            class="api-key-input" 
+                            id="apiKeyInput"
+                            placeholder="sk-..."
+                        >
+                    </div>
+                    <div class="model-dropdown" id="modelDropdown">
+                        <button class="model-button" id="modelButton">
+                            <span id="selectedModel">GPT-4</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="m6 9 6 6 6-6"/>
+                            </svg>
+                        </button>
+                        <div class="model-options" id="modelOptions">
+                            <div class="model-option selected" data-value="openai" data-label="OpenAI Key:">GPT-4</div>
+                            <div class="model-option" data-value="claude" data-label="Claude Key:">Claude</div>
+                            <div class="model-option" data-value="gemini" data-label="Gemini Key:">Gemini</div>
+                        </div>
+                    </div>
+                </div>
+                <button class="send-button" id="sendButton">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configure marked for better rendering
+        marked.setOptions({
+            highlight: function(code, lang) {
+                if (lang && hljs.getLanguage(lang)) {
+                    try {
+                        return hljs.highlight(code, { language: lang }).value;
+                    } catch (__) {}
+                }
+                return hljs.highlightAuto(code).value;
+            },
+            breaks: true,
+            gfm: true
+        });
+
+        let selectedModel = 'openai';
+        let isLoading = false;
+        let uploadedFiles = [];
+        
+        // Store API keys for each model
+        const apiKeys = {
+            openai: '',
+            claude: '',
+            gemini: ''
+        };
+
+        // DOM elements
+        const modelDropdown = document.getElementById('modelDropdown');
+        const modelButton = document.getElementById('modelButton');
+        const modelOptions = document.getElementById('modelOptions');
+        const selectedModelSpan = document.getElementById('selectedModel');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const messagesArea = document.getElementById('messagesArea');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const apiKeyLabel = document.getElementById('apiKeyLabel');
+        const apiStatus = document.getElementById('apiStatus');
+        const fileInput = document.getElementById('fileInput');
+        const filePreviewContainer = document.getElementById('filePreviewContainer');
+
+        // File handling functions (unchanged from original)
+        fileInput.addEventListener('change', handleFileUpload);
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const icons = {
+                'csv': `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14,2 14,8 20,8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10,9 9,9 8,9"/>
+                </svg>`,
+                'json': `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14,2 14,8 20,8"/>
+                    <path d="M8 12h4l-2 4"/>
+                </svg>`,
+                'xlsx': `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14,2 14,8 20,8"/>
+                    <rect x="8" y="12" width="8" height="6"/>
+                    <line x1="8" y1="15" x2="16" y2="15"/>
+                    <line x1="12" y1="12" x2="12" y2="18"/>
+                </svg>`,
+                'xls': `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14,2 14,8 20,8"/>
+                    <rect x="8" y="12" width="8" height="6"/>
+                    <line x1="8" y1="15" x2="16" y2="15"/>
+                    <line x1="12" y1="12" x2="12" y2="18"/>
+                </svg>`,
+                'db': `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                </svg>`,
+                'sqlite': `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/>
+                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>
+                </svg>`
+            };
+            return icons[ext] || `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14,2 14,8 20,8"/>
+            </svg>`;
+        }
+
+        async function handleFileUpload(event) {
+            const files = Array.from(event.target.files);
+            
+            for (const file of files) {
+                const validTypes = ['.json', '.csv', '.xlsx', '.xls', '.db', '.sqlite'];
+                const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+                
+                if (!validTypes.includes(fileExt)) {
+                    addErrorMessage(`File type ${fileExt} is not supported. Please use: ${validTypes.join(', ')}`);
+                    continue;
+                }
+
+                const fileData = {
+                    file: file,
+                    name: file.name,
+                    size: file.size,
+                    type: file.type,
+                    id: Date.now() + Math.random()
+                };
+
+                uploadedFiles.push(fileData);
+                await uploadAndParseFile(fileData);
+            }
+            
+            event.target.value = '';
+        }
+
+        async function uploadAndParseFile(fileData) {
+            const formData = new FormData();
+            formData.append('file', fileData.file);
+
+            try {
+                showFilePreview(fileData);
+                
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (result.error) {
+                    addErrorMessage(`Error parsing ${fileData.name}: ${result.error}`);
+                    removeFilePreview(fileData.id);
+                } else {
+                    fileData.parsedData = result;
+                    updateFilePreview(fileData);
+                    addMessage(`📁 **File "${fileData.name}" uploaded successfully!**\n\nYou can now ask questions about this data. The AI has access to the file structure and can use tools to analyze the actual data when needed.`, false, true);
+                }
+            } catch (error) {
+                addErrorMessage(`Error uploading ${fileData.name}: ${error.message}`);
+                removeFilePreview(fileData.id);
+            }
+        }
+
+        function showFilePreview(fileData) {
+            const previewDiv = document.createElement('div');
+            previewDiv.className = 'file-preview';
+            previewDiv.id = `file-${fileData.id}`;
+            
+            previewDiv.innerHTML = `
+                <div class="file-info">
+                    <div class="file-icon">${getFileIcon(fileData.name)}</div>
+                    <div class="file-details">
+                        <div class="file-name">${fileData.name}</div>
+                        <div class="file-size">${formatFileSize(fileData.size)} • Processing...</div>
+                    </div>
+                </div>
+                <div class="file-remove" onclick="removeFile('${fileData.id}')" title="Remove file">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </div>
+            `;
+            
+            filePreviewContainer.appendChild(previewDiv);
+        }
+
+        function updateFilePreview(fileData) {
+            const previewDiv = document.getElementById(`file-${fileData.id}`);
+            if (previewDiv) {
+                const sizeDiv = previewDiv.querySelector('.file-size');
+                if (sizeDiv) {
+                    sizeDiv.textContent = `${formatFileSize(fileData.size)} • Ready`;
+                }
+                
+                const dataPreview = document.createElement('div');
+                dataPreview.className = 'file-data-preview';
+                
+                let previewContent = '';
+                const data = fileData.parsedData;
+                
+                if (data.features) {
+                    if (typeof data.features === 'object' && !Array.isArray(data.features)) {
+                        previewContent = `Tables and Features:\n`;
+                        for (const [table, cols] of Object.entries(data.features)) {
+                            previewContent += `• ${table}: ${cols.join(', ')}\n`;
+                        }
+                        if (data.population) {
+                            previewContent += `\nTotal Population: ${data.population} rows\n`;
+                        }
+                        previewContent += `\nData Preview:\n${JSON.stringify(data.preview, null, 2)}`;
+                    } else {
+                        previewContent = `Features: ${data.features.join(', ')}\n`;
+                        if (data.population) {
+                            previewContent += `Population: ${data.population} rows\n`;
+                        }
+                        previewContent += `\nData Preview:\n${JSON.stringify(data.preview, null, 2)}`;
+                    }
+                } else {
+                    previewContent = JSON.stringify(data, null, 2);
+                }
+                
+                dataPreview.innerHTML = `
+                    <div class="file-data-header">Data Preview</div>
+                    <div class="file-data-content">${previewContent.substring(0, 800)}${previewContent.length > 800 ? '...' : ''}</div>
+                `;
+                
+                previewDiv.appendChild(dataPreview);
+            }
+        }
+
+        function removeFilePreview(fileId) {
+            const previewDiv = document.getElementById(`file-${fileId}`);
+            if (previewDiv) {
+                previewDiv.remove();
+            }
+        }
+
+        window.removeFile = function(fileId) {
+            uploadedFiles = uploadedFiles.filter(f => f.id != fileId);
+            removeFilePreview(fileId);
+        };
+
+        function updateApiStatus(hasKey) {
+            if (hasKey) {
+                apiStatus.classList.add('valid');
+                apiStatus.classList.remove('invalid');
+            } else {
+                apiStatus.classList.remove('valid');
+                apiStatus.classList.add('invalid');
+            }
+        }
+
+        function updateApiKeyInput() {
+            apiKeyInput.value = apiKeys[selectedModel];
+            updateApiStatus(apiKeys[selectedModel].length > 0);
+        }
+
+        apiKeyInput.addEventListener('input', function() {
+            apiKeys[selectedModel] = this.value.trim();
+            updateApiStatus(this.value.trim().length > 0);
+        });
+
+        modelButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            modelDropdown.classList.toggle('open');
+            modelOptions.classList.toggle('show');
+        });
+
+        document.addEventListener('click', () => {
+            modelDropdown.classList.remove('open');
+            modelOptions.classList.remove('show');
+        });
+
+        modelOptions.addEventListener('click', (e) => {
+            if (e.target.classList.contains('model-option')) {
+                document.querySelector('.model-option.selected').classList.remove('selected');
+                e.target.classList.add('selected');
+                
+                selectedModel = e.target.dataset.value;
+                selectedModelSpan.textContent = e.target.textContent;
+                apiKeyLabel.textContent = e.target.dataset.label;
+                
+                updateApiKeyInput();
+                
+                modelDropdown.classList.remove('open');
+                modelOptions.classList.remove('show');
+            }
+        });
+
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 200) + 'px';
+        });
+
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        sendButton.addEventListener('click', sendMessage);
+
+        // Enhanced message rendering with markdown support
+        function addMessage(content, isUser = false, isSystem = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'message-user' : 'message-assistant'}`;
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            
+            if (isSystem) {
+                messageContent.style.background = '#f0f8ff';
+                messageContent.style.border = '1px solid #b3d9ff';
+                messageContent.style.color = '#0066cc';
+            }
+            
+            // Render markdown for assistant and system messages
+            if (!isUser || isSystem) {
+                try {
+                    messageContent.innerHTML = marked.parse(content);
+                    // Highlight code blocks
+                    messageContent.querySelectorAll('pre code').forEach((block) => {
+                        hljs.highlightElement(block);
+                    });
+                } catch (error) {
+                    console.warn('Markdown parsing failed:', error);
+                    messageContent.textContent = content;
+                }
+            } else {
+                // User messages: simple markdown parsing
+                try {
+                    messageContent.innerHTML = marked.parse(content);
+                } catch (error) {
+                    messageContent.textContent = content;
+                }
+            }
+            
+            messageDiv.appendChild(messageContent);
+            
+            const welcomeMessage = document.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+            
+            messagesArea.appendChild(messageDiv);
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+
+        function addErrorMessage(content) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            
+            // Parse markdown for error messages too
+            try {
+                errorDiv.innerHTML = marked.parse(content);
+            } catch (error) {
+                errorDiv.textContent = content;
+            }
+            
+            const welcomeMessage = document.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.remove();
+            }
+            
+            messagesArea.appendChild(errorDiv);
+            messagesArea.scrollTop = messagesArea.scrollHeight;
+        }
+
+        function setLoading(loading) {
+            isLoading = loading;
+            sendButton.disabled = loading;
+            loadingIndicator.classList.toggle('show', loading);
+            
+            if (loading) {
+                sendButton.textContent = 'Sending...';
+            } else {
+                sendButton.textContent = 'Send';
+            }
+        }
+
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            const currentApiKey = apiKeys[selectedModel];
+
+            if (!message || isLoading) return;
+
+            if (!currentApiKey) {
+                addErrorMessage(`Please enter your **${selectedModelSpan.textContent}** API key first.`);
+                apiKeyInput.focus();
+                return;
+            }
+
+            let enhancedMessage = message;
+            if (uploadedFiles.length > 0) {
+                const fileContext = uploadedFiles.map(f => {
+                    let context = `File: ${f.name}\n`;
+                    if (f.parsedData) {
+                        if (f.parsedData.features) {
+                            if (typeof f.parsedData.features === 'object' && !Array.isArray(f.parsedData.features)) {
+                                context += `Tables and Features:\n`;
+                                for (const [table, cols] of Object.entries(f.parsedData.features)) {
+                                    context += `  ${table}: ${cols.join(', ')}\n`;
+                                }
+                            } else {
+                                context += `Features: ${f.parsedData.features.join(', ')}\n`;
+                            }
+                        }
+                        if (f.parsedData.tables) {
+                            context += `Tables: ${f.parsedData.tables.join(', ')}\n`;
+                        }
+                        if (f.parsedData.population) {
+                            context += `Population: ${f.parsedData.population} rows\n`;
+                        }
+                    }
+                    return context;
+                }).join('\n');
+                
+                enhancedMessage = `Context: I have uploaded the following files:\n${fileContext}\n\nUser Question: ${message}`;
+            }
+
+            addMessage(message, true);
+            
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            
+            setLoading(true);
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model: selectedModel,
+                        apiKey: currentApiKey,
+                        message: enhancedMessage
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.reply) {
+                    addMessage(data.reply);
+                } else {
+                    addErrorMessage('No response received from the API.');
+                }
+            } catch (error) {
+                addErrorMessage(`**Error:** ${error.message}`);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            updateApiKeyInput();
+            messageInput.focus();
+        });
+    </script>
+</body>
+</html>
