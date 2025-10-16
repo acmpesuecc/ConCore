@@ -1,36 +1,184 @@
 import os
 import pandas as pd
 import json
+import time
+import sqlite3
+from typing import Dict, Any
+from dotenv import load_dotenv
+import google.generativeai as genai
 
-def handle_file_upload(file, save_dir, metadata_path):
-    os.makedirs(save_dir, exist_ok=True)
-    file_path = os.path.join(save_dir, file.filename)
-    file.save(file_path)
+from tools.context_management.context_handler import append_dataset_metadata, update_context_from_llm
 
-    meta = {"file": file.filename, "columns": [], "rows": 0, "type": None}
+load_dotenv()
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+
+
+def extract_metadata_with_llm(filename: str, basic_metadata: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Use Gemini LLM to generate rich metadata about the dataset.
+    """
+    model = genai.GenerativeModel("gemini-1.5-flash")
+
+    prompt = f"""Analyze this dataset metadata and provide rich context:
+
+FILENAME: {filename}
+TYPE: {basic_metadata.get('type', 'unknown')}
+COLUMNS: {basic_metadata.get('columns', [])}
+ROWS: {basic_metadata.get('rows', 0)}
+
+Respond with ONLY a JSON object containing:
+{{
+  "description": "Brief description of what this dataset likely contains",
+  "potential_analyses": ["list", "of", "possible", "analyses"],
+  "key_fields": ["most", "important", "columns"],
+  "data_quality_notes": "Any observations about data structure"
+}}
+
+Only valid JSON, no additional text."""
 
     try:
-        if file.filename.endswith(".csv"):
-            df = pd.read_csv(file_path)
-            meta.update({
-                "columns": df.columns.tolist(),
-                "rows": len(df),
-                "type": "csv"
-            })
-        elif file.filename.endswith(".xlsx"):
-            df = pd.read_excel(file_path)
-            meta.update({
-                "columns": df.columns.tolist(),
-                "rows": len(df),
-                "type": "excel"
-            })
-        elif file.filename.endswith(".db"):
-            meta["type"] = "database"
-        else:
-            meta["type"] = "unknown"
-    except Exception as e:
-        meta["error"] = str(e)
+        response = model.generate_content(prompt)
+        response_text = getattr(response, "text", "{}").strip()
 
-    with open(metadata_path, "w") as f:
-        json.dump(meta, f, indent=4)
-    return meta
+        # Handle fenced JSON blocks if present
+        if "```json" in response_text:
+            response_text = response_text.split("```json")[1].split("```")[0].strip()
+        elif "```" in response_text:
+            response_text = response_text.split("```")[1].split("```")[0].strip()
+
+        return json.loads(response_text)
+    except Exception as e:
+        return {
+            "description": "Metadata extraction failed",
+            "error": str(e)
+        }
+
+
+def handle_file_upload(file, save_dir: str, metadata_path: str, context_path: str) -> Dict[str, Any]:
+    """
+    Handle file upload, extract metadata, and update context.
+    """
+    os.makedirs(save_dir, exist_ok=True)
+
+    filename = file.filename
+    file_path = os.path.join(save_dir, filename)
+    file.save(file_path)
+
+    # Initialize metadata structure
+    metadata = {
+        "filename": filename,
+        "file_path": file_path,
+        "upload_timestamp": int(time.time()),
+        "columns": [],
+        "rows": 0,
+        "type": None,
+        "size_bytes": os.path.getsize(file_path)
+    }
+
+    try:
+        # --- CSV ---
+        if filename.endswith(".csv"):
+            df = pd.read_csv(file_path)
+            metadata.update({
+                "type": "csv",
+                "columns": df.columns.tolist(),
+                "rows": len(df),
+                "dtypes": {col: str(dtype) for col, dtype in df.dtypes.items()},
+                "sample_data": df.head(3).to_dict(orient="records")
+            })
+
+        # --- Excel ---
+        elif filename.endswith((".xlsx", ".xls")):
+            excel_file = pd.ExcelFile(file_path)
+            sheets_metadata = []
+
+            for sheet_name in excel_file.sheet_names:
+                df = pd.read_excel(file_path, sheet_name=sheet_name)
+                sheets_metadata.append({
+                    "sheet_name": sheet_name,
+                    "columns": df.columns.tolist(),
+                    "rows": len(df),
+                    "dtypes": {col: str(dtype) for col, dtype in df.dtypes.items()}
+                })
+
+            metadata.update({
+                "type": "excel",
+                "sheets": sheets_metadata,
+                "num_sheets": len(excel_file.sheet_names)
+            })
+
+            if sheets_metadata:
+                metadata["columns"] = sheets_metadata[0]["columns"]
+                metadata["rows"] = sheets_metadata[0]["rows"]
+
+        # --- SQLite Database ---
+        elif filename.endswith((".db", ".sqlite")):
+            conn = sqlite3.connect(file_path)
+            cursor = conn.cursor()
+
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            tables = [row[0] for row in cursor.fetchall()]
+
+            tables_metadata = []
+            for table in tables:
+                cursor.execute(f"SELECT * FROM {table} LIMIT 0")
+                columns = [desc[0] for desc in cursor.description]
+                cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                row_count = cursor.fetchone()[0]
+
+                tables_metadata.append({
+                    "table_name": table,
+                    "columns": columns,
+                    "rows": row_count
+                })
+
+            conn.close()
+
+            metadata.update({
+                "type": "database",
+                "tables": tables_metadata,
+                "num_tables": len(tables)
+            })
+
+            if tables_metadata:
+                metadata["columns"] = tables_metadata[0]["columns"]
+                metadata["rows"] = tables_metadata[0]["rows"]
+
+        # --- JSON ---
+        elif filename.endswith(".json"):
+            with open(file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                if isinstance(data, list) and data and isinstance(data[0], dict):
+                    metadata.update({
+                        "type": "json",
+                        "columns": list(data[0].keys()),
+                        "rows": len(data),
+                        "sample_data": data[:3]
+                    })
+                else:
+                    metadata.update({
+                        "type": "json",
+                        "structure": type(data).__name__,
+                        "rows": 1
+                    })
+
+        else:
+            metadata["type"] = "unknown"
+            metadata["error"] = "Unsupported file type"
+
+    except Exception as e:
+        metadata["type"] = "error"
+        metadata["error"] = str(e)
+
+    # --- LLM Metadata Enhancement ---
+    if metadata["type"] not in ["unknown", "error"]:
+        llm_metadata = extract_metadata_with_llm(filename, metadata)
+        metadata["llm_insights"] = llm_metadata
+
+        context_text = f"Dataset '{filename}' uploaded: {llm_metadata.get('description', 'No description available')}"
+        update_context_from_llm(context_path, context_text, source="file_upload")
+
+    # --- Save metadata ---
+    append_dataset_metadata(metadata_path, metadata)
+
+    return metadata

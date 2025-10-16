@@ -2,30 +2,579 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Data Copilot</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Data Copilot - AI-Powered Analysis</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+    
+    .header p {
+      opacity: 0.9;
+      font-size: 1.1em;
+    }
+    
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 20px;
+      padding: 30px;
+    }
+    
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .card {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid #e0e0e0;
+    }
+    
+    .card h3 {
+      color: #667eea;
+      margin-bottom: 15px;
+      font-size: 1.2em;
+    }
+    
+    .file-upload {
+      position: relative;
+      overflow: hidden;
+      display: inline-block;
+      width: 100%;
+    }
+    
+    .file-upload input[type="file"] {
+      position: absolute;
+      left: -9999px;
+    }
+    
+    .file-upload label {
+      display: block;
+      padding: 12px;
+      background: #667eea;
+      color: white;
+      text-align: center;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    
+    .file-upload label:hover {
+      background: #5568d3;
+    }
+    
+    .file-name {
+      margin-top: 10px;
+      font-size: 0.9em;
+      color: #666;
+      padding: 8px;
+      background: white;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+    }
+    
+    button {
+      padding: 12px 24px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: all 0.3s;
+      width: 100%;
+    }
+    
+    button:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .chat-area {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .chat-box {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      height: 400px;
+      overflow-y: auto;
+      border: 1px solid #e0e0e0;
+    }
+    
+    .message {
+      margin-bottom: 15px;
+      padding: 12px 16px;
+      border-radius: 8px;
+      max-width: 80%;
+      word-wrap: break-word;
+    }
+    
+    .message.user {
+      background: #667eea;
+      color: white;
+      margin-left: auto;
+    }
+    
+    .message.assistant {
+      background: white;
+      border: 1px solid #e0e0e0;
+    }
+    
+    .message.system {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      max-width: 100%;
+      text-align: center;
+      font-style: italic;
+    }
+    
+    .input-area {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .input-area input {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 1em;
+      transition: border-color 0.3s;
+    }
+    
+    .input-area input:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .insights-box {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      min-height: 200px;
+      max-height: 500px;
+      overflow-y: auto;
+      border: 1px solid #e0e0e0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+    
+    .insight-entry {
+      margin-bottom: 15px;
+      padding: 10px;
+      background: white;
+      border-radius: 6px;
+      border-left: 4px solid #667eea;
+    }
+    
+    .insight-entry .step {
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 5px;
+    }
+    
+    .insight-entry .content {
+      color: #333;
+      white-space: pre-wrap;
+    }
+    
+    .status {
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 0.9em;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .status.info {
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      margin-right: 10px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    @media (max-width: 768px) {
+      .main-content {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
   <div class="container">
-    <h1>Data Copilot</h1>
-
-    <form id="uploadForm" enctype="multipart/form-data">
-      <label>Select Data File:</label>
-      <input type="file" name="file" id="fileInput" required>
-      <button type="submit">Upload</button>
-    </form>
-
-    <h3>Add Context</h3>
-    <textarea id="contextInput" placeholder="Describe the data, goals, etc."></textarea>
-    <button id="saveContext">Save Context</button>
-
-    <h3>Generate Insights</h3>
-    <button id="generateInsights">Run CoTAS</button>
-
-    <h3>Insights Log</h3>
-    <div id="output"></div>
+    <div class="header">
+      <h1>🤖 Data Copilot</h1>
+      <p>AI-Powered Data Analysis Platform</p>
+    </div>
+    
+    <div class="main-content">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="card">
+          <h3>Session</h3>
+          <button id="createSession">Create New Session</button>
+          <div id="sessionStatus" style="margin-top: 10px; font-size: 0.9em; color: #666;"></div>
+        </div>
+        
+        <div class="card">
+          <h3>Upload Data</h3>
+          <div class="file-upload">
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.db,.sqlite">
+            <label for="fileInput">Choose File</label>
+          </div>
+          <div id="fileName" class="file-name">No file selected</div>
+          <button id="uploadBtn" disabled style="margin-top: 10px;">Upload & Process</button>
+        </div>
+        
+        <div class="card">
+          <h3>Generate Insights</h3>
+          <button id="generateBtn" disabled>Run CoTAS Analysis</button>
+        </div>
+      </div>
+      
+      <!-- Main Chat Area -->
+      <div class="chat-area">
+        <div class="card">
+          <h3>Chat</h3>
+          <div id="chatBox" class="chat-box"></div>
+          <div class="input-area">
+            <input 
+              type="text" 
+              id="messageInput" 
+              placeholder="Describe your data, ask questions, or provide context..."
+              disabled
+            >
+            <button id="sendBtn" disabled style="width: auto;">Send</button>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h3>CoTAS Insights</h3>
+          <div id="insightsBox" class="insights-box">
+            <p style="color: #999; text-align: center;">Start an analysis to see insights here...</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-
-  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  
+  <script>
+    let sessionId = null;
+    let selectedFile = null;
+    
+    // DOM Elements
+    const createSessionBtn = document.getElementById('createSession');
+    const sessionStatus = document.getElementById('sessionStatus');
+    const fileInput = document.getElementById('fileInput');
+    const fileName = document.getElementById('fileName');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const generateBtn = document.getElementById('generateBtn');
+    const chatBox = document.getElementById('chatBox');
+    const messageInput = document.getElementById('messageInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const insightsBox = document.getElementById('insightsBox');
+    
+    // Create Session
+    createSessionBtn.addEventListener('click', async () => {
+      try {
+        createSessionBtn.disabled = true;
+        sessionStatus.innerHTML = '<div class="spinner"></div>Creating session...';
+        
+        const response = await fetch('/create-session', {
+          method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          sessionId = data.session_id;
+          sessionStatus.innerHTML = `<div class="status success">Session: ${sessionId.substring(0, 8)}...</div>`;
+          messageInput.disabled = false;
+          sendBtn.disabled = false;
+          generateBtn.disabled = false;
+          addSystemMessage('Session created successfully! You can now upload data and start chatting.');
+        } else {
+          throw new Error(data.error || 'Failed to create session');
+        }
+      } catch (error) {
+        sessionStatus.innerHTML = `<div class="status error">${error.message}</div>`;
+        createSessionBtn.disabled = false;
+      }
+    });
+    
+    // File Selection
+    fileInput.addEventListener('change', (e) => {
+      selectedFile = e.target.files[0];
+      if (selectedFile) {
+        fileName.textContent = selectedFile.name;
+        uploadBtn.disabled = !sessionId;
+      } else {
+        fileName.textContent = 'No file selected';
+        uploadBtn.disabled = true;
+      }
+    });
+    
+    // Upload File
+    uploadBtn.addEventListener('click', async () => {
+      if (!selectedFile || !sessionId) return;
+      
+      try {
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<div class="spinner"></div>Uploading...';
+        
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('session_id', sessionId);
+        
+        const response = await fetch('/upload-file', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          addSystemMessage(`File uploaded: ${data.metadata.filename}`);
+          addAssistantMessage(`I've processed your file. It contains ${data.metadata.rows} rows and ${data.metadata.columns.length} columns. ${data.metadata.llm_insights?.description || ''}`);
+          uploadBtn.innerHTML = 'Upload & Process';
+          uploadBtn.disabled = false;
+        } else {
+          throw new Error(data.error || 'Upload failed');
+        }
+      } catch (error) {
+        addSystemMessage(`Error: ${error.message}`, true);
+        uploadBtn.innerHTML = 'Upload & Process';
+        uploadBtn.disabled = false;
+      }
+    });
+    
+    // Send Message
+    async function sendMessage() {
+      const message = messageInput.value.trim();
+      if (!message || !sessionId) return;
+      
+      addUserMessage(message);
+      messageInput.value = '';
+      sendBtn.disabled = true;
+      
+      try {
+        const response = await fetch('/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: sessionId,
+            message: message
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          addAssistantMessage(data.response);
+          if (data.context_updated) {
+            addSystemMessage('Context updated with important information');
+          }
+        } else {
+          throw new Error(data.error || 'Message failed');
+        }
+      } catch (error) {
+        addSystemMessage(`Error: ${error.message}`, true);
+      } finally {
+        sendBtn.disabled = false;
+      }
+    }
+    
+    sendBtn.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+    
+    // Generate Insights
+    generateBtn.addEventListener('click', async () => {
+      if (!sessionId) return;
+      
+      generateBtn.disabled = true;
+      generateBtn.innerHTML = '<div class="spinner"></div>Analyzing...';
+      insightsBox.innerHTML = '';
+      
+      try {
+        const response = await fetch('/generate-insights', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: sessionId,
+            goal: 'Perform comprehensive data analysis',
+            max_loops: 15
+          })
+        });
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const jsonStr = line.substring(6);
+              try {
+                const update = JSON.parse(jsonStr);
+                handleInsightUpdate(update);
+              } catch (e) {
+                console.error('Failed to parse:', jsonStr);
+              }
+            }
+          }
+        }
+        
+        generateBtn.innerHTML = 'Run CoTAS Analysis';
+        generateBtn.disabled = false;
+        addSystemMessage('Analysis complete!');
+        
+      } catch (error) {
+        addSystemMessage(`Error: ${error.message}`, true);
+        generateBtn.innerHTML = 'Run CoTAS Analysis';
+        generateBtn.disabled = false;
+      }
+    });
+    
+    // Handle Insight Updates
+    function handleInsightUpdate(update) {
+      const entry = document.createElement('div');
+      entry.className = 'insight-entry';
+      
+      let content = '';
+      
+      switch (update.type) {
+        case 'start':
+          content = `<div class="step">🚀 Starting Analysis</div><div class="content">${update.message}</div>`;
+          break;
+        case 'think':
+          content = `<div class="step">💭 Step ${update.step}: THINK</div><div class="content">${update.content}</div>`;
+          break;
+        case 'act_start':
+          content = `<div class="step">⚙️ Step ${update.step}: ACT</div><div class="content">${update.message}</div>`;
+          break;
+        case 'act_complete':
+          content = `<div class="step">✓ Step ${update.step}: Completed</div><div class="content">${update.insight}</div>`;
+          if (update.stdout) content += `<br><strong>Output:</strong><pre>${update.stdout.substring(0, 500)}</pre>`;
+          break;
+        case 'done':
+          content = `<div class="step">🎯 FINAL INSIGHT</div><div class="content">${update.final_insight}</div>`;
+          break;
+        case 'error':
+          content = `<div class="step">❌ Error at Step ${update.step}</div><div class="content">${update.message}</div>`;
+          break;
+        default:
+          content = `<div class="content">${JSON.stringify(update)}</div>`;
+      }
+      
+      entry.innerHTML = content;
+      insightsBox.appendChild(entry);
+      insightsBox.scrollTop = insightsBox.scrollHeight;
+    }
+    
+    // Chat UI Functions
+    function addUserMessage(text) {
+      const msg = document.createElement('div');
+      msg.className = 'message user';
+      msg.textContent = text;
+      chatBox.appendChild(msg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+    
+    function addAssistantMessage(text) {
+      const msg = document.createElement('div');
+      msg.className = 'message assistant';
+      msg.textContent = text;
+      chatBox.appendChild(msg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+    
+    function addSystemMessage(text, isError = false) {
+      const msg = document.createElement('div');
+      msg.className = 'message system';
+      msg.textContent = text;
+      if (isError) msg.style.background = '#f8d7da';
+      chatBox.appendChild(msg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  </script>
 </body>
 </html>
