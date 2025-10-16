@@ -12,7 +12,7 @@ from tools.context_management.context_handler import (
 from tools.script_executor.sandbox import run_script_safely
 
 load_dotenv()
-api_key=os.getenv("GOOGLE_API_KEY")
+api_key = os.getenv("GOOGLE_API_KEY")  # FIXED: Added space after =
 genai.configure(api_key=api_key)
 
 def process_user_message(message: str, paths: dict) -> dict:
@@ -53,7 +53,7 @@ Example output:
 
 Respond with ONLY valid JSON, no additional text."""
 
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-2.5-flash")
     
     try:
         response = model.generate_content(prompt)
@@ -72,7 +72,7 @@ Respond with ONLY valid JSON, no additional text."""
             update_context_from_llm(
                 paths["context"], 
                 result["context_update"],
-                message
+                source="user_chat"  # FIXED: Changed to use source parameter
             )
         
         # Append to chat history
@@ -97,6 +97,7 @@ Respond with ONLY valid JSON, no additional text."""
         
     except Exception as e:
         error_msg = f"Failed to process message: {str(e)}"
+        print(f"ERROR in process_user_message: {error_msg}")  # ADDED: Debug logging
         append_to_chat_history(paths["chat_history"], {
             "role": "error",
             "message": error_msg,
@@ -115,7 +116,7 @@ def cotas_generate_insights(paths: dict, user_goal: str, max_loops: int = 15) ->
     """
     context = read_context(paths["context"])
     dataset_metadata = read_context(paths["dataset_metadata"])
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-2.5-flash")
     
     # Initialize CoTAS log
     cotas_log = {"goal": user_goal, "steps": [], "start_time": int(time.time())}
