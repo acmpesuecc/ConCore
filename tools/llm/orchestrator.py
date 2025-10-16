@@ -12,19 +12,14 @@ from tools.context_management.context_handler import (
 from tools.script_executor.sandbox import run_script_safely
 
 load_dotenv()
-api_key = os.getenv("GOOGLE_API_KEY")  # FIXED: Added space after =
+api_key = os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=api_key)
 
 def process_user_message(message: str, paths: dict) -> dict:
-    """
-    Process user message through LLM orchestrator.
-    LLM analyzes message and decides what context updates are needed.
-    """
     context = read_context(paths["context"])
     dataset_metadata = read_context(paths["dataset_metadata"])
     chat_history = read_context(paths["chat_history"])
     
-    # Build prompt for orchestrator
     prompt = f"""You are a data analysis copilot orchestrator. Analyze the user's message and determine what information should be stored.
 
 CURRENT CONTEXT:
@@ -59,7 +54,6 @@ Respond with ONLY valid JSON, no additional text."""
         response = model.generate_content(prompt)
         response_text = getattr(response, "text", str(response)).strip()
         
-        # Extract JSON from markdown if present
         if "```json" in response_text:
             response_text = response_text.split("```json")[1].split("```")[0].strip()
         elif "```" in response_text:
@@ -67,15 +61,13 @@ Respond with ONLY valid JSON, no additional text."""
         
         result = json.loads(response_text)
         
-        # Update context if needed
         if result.get("context_update"):
             update_context_from_llm(
                 paths["context"], 
                 result["context_update"],
-                source="user_chat"  # FIXED: Changed to use source parameter
+                source="user_chat" 
             )
         
-        # Append to chat history
         append_to_chat_history(paths["chat_history"], {
             "role": "user",
             "message": message,
@@ -97,7 +89,7 @@ Respond with ONLY valid JSON, no additional text."""
         
     except Exception as e:
         error_msg = f"Failed to process message: {str(e)}"
-        print(f"ERROR in process_user_message: {error_msg}")  # ADDED: Debug logging
+        print(f"ERROR in process_user_message: {error_msg}")
         append_to_chat_history(paths["chat_history"], {
             "role": "error",
             "message": error_msg,
@@ -110,15 +102,10 @@ Respond with ONLY valid JSON, no additional text."""
         }
 
 def cotas_generate_insights(paths: dict, user_goal: str, max_loops: int = 15) -> Generator[str, None, None]:
-    """
-    CoTAS (Chain of Thought-Action-Search) loop for autonomous data analysis.
-    Fully independent routing: T->A->T->S->A->T->... based on LLM decisions.
-    """
     context = read_context(paths["context"])
     dataset_metadata = read_context(paths["dataset_metadata"])
     model = genai.GenerativeModel("gemini-2.5-flash")
     
-    # Initialize CoTAS log
     cotas_log = {"goal": user_goal, "steps": [], "start_time": int(time.time())}
     
     last_output = f"User Goal: {user_goal}"
@@ -129,8 +116,7 @@ def cotas_generate_insights(paths: dict, user_goal: str, max_loops: int = 15) ->
     while step < max_loops:
         step += 1
         
-        # Build context-aware prompt
-        decision_prompt = f"""You are an autonomous data analysis agent using CoTAS methodology (Thought-Action-Search).
+        decision_prompt = f"""You are an autonomous data analysis agent using CoTAS methodology (Thought-Action-Search).s
 
 ANALYSIS GOAL:
 {user_goal}
@@ -190,7 +176,6 @@ No additional text. Only valid JSON."""
             response = model.generate_content(decision_prompt)
             response_text = getattr(response, "text", str(response)).strip()
             
-            # Extract JSON
             if "```json" in response_text:
                 response_text = response_text.split("```json")[1].split("```")[0].strip()
             elif "```" in response_text:
@@ -222,14 +207,12 @@ No additional text. Only valid JSON."""
         content = decision.get("content", "")
         context_update = decision.get("context_update")
         
-        # Update context if specified
         if context_update:
             update_context_from_llm(paths["context"], context_update, f"CoTAS Step {step}")
             context = read_context(paths["context"])
         
         timestamp = int(time.time())
         
-        # ===== THINK =====
         if action == "THINK":
             entry = {
                 "step": step,
@@ -248,7 +231,6 @@ No additional text. Only valid JSON."""
                 "context_updated": context_update is not None
             })
         
-        # ===== ACT =====
         elif action == "ACT":
             yield json.dumps({
                 "type": "act_start",
@@ -256,7 +238,6 @@ No additional text. Only valid JSON."""
                 "message": "Executing code..."
             })
             
-            # Save script
             script_filename = f"step_{step:03d}_{timestamp}.py"
             script_path = os.path.join(paths["scripts"], script_filename)
             
@@ -271,9 +252,7 @@ No additional text. Only valid JSON."""
                 })
                 continue
             
-            # Execute script
             try:
-                # Update working directory in code if needed
                 session_id = context.get("session_id", "")
                 modified_code = content.replace(
                     "storage/<session_id>/datasets/",
@@ -288,7 +267,6 @@ No additional text. Only valid JSON."""
                 stdout = ""
                 stderr = f"Execution failed: {str(e)}"
             
-            # Save results
             result_filename = f"step_{step:03d}_{timestamp}.txt"
             result_path = os.path.join(paths["results"], result_filename)
             
@@ -300,14 +278,13 @@ No additional text. Only valid JSON."""
                 "action": "ACT",
                 "script": script_filename,
                 "result": result_filename,
-                "stdout": stdout[:1000],  # Truncate for log
+                "stdout": stdout[:1000], 
                 "stderr": stderr[:1000],
                 "context_update": context_update,
                 "timestamp": timestamp
             }
             cotas_log["steps"].append(entry)
             
-            # Generate insight from execution
             insight_prompt = f"""Analyze these code execution results:
 
 CODE:
@@ -343,7 +320,6 @@ Respond with only the insight text, no formatting."""
                 "context_updated": context_update is not None
             })
         
-        # ===== DONE =====
         elif action == "DONE":
             entry = {
                 "step": step,
@@ -357,7 +333,6 @@ Respond with only the insight text, no formatting."""
             
             write_context(paths["cotas_log"], cotas_log)
             
-            # Save final insight
             final_insight_path = os.path.join(paths["session"], "final_insight.txt")
             with open(final_insight_path, "w", encoding="utf-8") as f:
                 f.write(content)
@@ -377,7 +352,6 @@ Respond with only the insight text, no formatting."""
             })
             break
     
-    # Save final log
     if not cotas_log.get("completed"):
         cotas_log["end_time"] = int(time.time())
         cotas_log["completed"] = False

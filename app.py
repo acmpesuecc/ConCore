@@ -11,7 +11,6 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
 BASE_STORAGE = "storage"
 
 def get_session_path(session_id: str) -> dict:
-    """Return all relevant paths for a session"""
     session_path = os.path.join(BASE_STORAGE, session_id)
     return {
         "session": session_path,
@@ -25,7 +24,6 @@ def get_session_path(session_id: str) -> dict:
     }
 
 def ensure_session_dirs(paths: dict):
-    """Create all necessary session directories"""
     os.makedirs(paths["session"], exist_ok=True)
     os.makedirs(paths["datasets"], exist_ok=True)
     os.makedirs(paths["scripts"], exist_ok=True)
@@ -37,12 +35,10 @@ def home():
 
 @app.route("/create-session", methods=["POST"])
 def create_session():
-    """Create a new session with unique ID"""
     session_id = str(uuid.uuid4())
     paths = get_session_path(session_id)
     ensure_session_dirs(paths)
     
-    # Initialize empty context and metadata
     write_context(paths["context"], {"session_id": session_id, "history": []})
     write_context(paths["dataset_metadata"], {"datasets": []})
     write_context(paths["chat_history"], {"messages": []})
@@ -54,7 +50,6 @@ def create_session():
 
 @app.route("/chat", methods=["POST"])
 def chat():
-    """Main chat endpoint - orchestrator handles all interactions"""
     data = request.get_json()
     session_id = data.get("session_id")
     user_message = data.get("message", "").strip()
@@ -68,7 +63,6 @@ def chat():
         return jsonify({"error": "Invalid session_id"}), 404
     
     try:
-        # Process message through orchestrator
         response = process_user_message(user_message, paths)
         return jsonify(response)
     except Exception as e:
@@ -76,7 +70,6 @@ def chat():
 
 @app.route("/upload-file", methods=["POST"])
 def upload_file():
-    """Upload and process data files (CSV, Excel, DB)"""
     session_id = request.form.get("session_id")
     file = request.files.get("file")
     
@@ -89,7 +82,6 @@ def upload_file():
         return jsonify({"error": "Invalid session_id"}), 404
     
     try:
-        # Handle file upload and extract metadata
         metadata = handle_file_upload(
             file, 
             paths["datasets"], 
@@ -105,7 +97,6 @@ def upload_file():
 
 @app.route("/generate-insights", methods=["POST"])
 def generate_insights():
-    """Start CoTAS analysis loop with streaming responses"""
     data = request.get_json()
     session_id = data.get("session_id")
     user_goal = data.get("goal", "Perform comprehensive data analysis")
@@ -130,7 +121,6 @@ def generate_insights():
 
 @app.route("/get-context", methods=["GET"])
 def get_context():
-    """Retrieve current session context"""
     session_id = request.args.get("session_id")
     
     if not session_id:
@@ -151,7 +141,6 @@ def get_context():
 
 @app.route("/get-chat-history", methods=["GET"])
 def get_chat_history():
-    """Retrieve chat history for a session"""
     session_id = request.args.get("session_id")
     
     if not session_id:

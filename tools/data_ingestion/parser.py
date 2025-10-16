@@ -14,9 +14,6 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 
 def extract_metadata_with_llm(filename: str, basic_metadata: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Use Gemini LLM to generate rich metadata about the dataset.
-    """
     model = genai.GenerativeModel("gemini-1.5-flash")
 
     prompt = f"""Analyze this dataset metadata and provide rich context:
@@ -40,7 +37,6 @@ Only valid JSON, no additional text."""
         response = model.generate_content(prompt)
         response_text = getattr(response, "text", "{}").strip()
 
-        # Handle fenced JSON blocks if present
         if "```json" in response_text:
             response_text = response_text.split("```json")[1].split("```")[0].strip()
         elif "```" in response_text:
@@ -55,16 +51,12 @@ Only valid JSON, no additional text."""
 
 
 def handle_file_upload(file, save_dir: str, metadata_path: str, context_path: str) -> Dict[str, Any]:
-    """
-    Handle file upload, extract metadata, and update context.
-    """
     os.makedirs(save_dir, exist_ok=True)
 
     filename = file.filename
     file_path = os.path.join(save_dir, filename)
     file.save(file_path)
 
-    # Initialize metadata structure
     metadata = {
         "filename": filename,
         "file_path": file_path,
@@ -76,7 +68,6 @@ def handle_file_upload(file, save_dir: str, metadata_path: str, context_path: st
     }
 
     try:
-        # --- CSV ---
         if filename.endswith(".csv"):
             df = pd.read_csv(file_path)
             metadata.update({
@@ -87,7 +78,6 @@ def handle_file_upload(file, save_dir: str, metadata_path: str, context_path: st
                 "sample_data": df.head(3).to_dict(orient="records")
             })
 
-        # --- Excel ---
         elif filename.endswith((".xlsx", ".xls")):
             excel_file = pd.ExcelFile(file_path)
             sheets_metadata = []
@@ -111,7 +101,6 @@ def handle_file_upload(file, save_dir: str, metadata_path: str, context_path: st
                 metadata["columns"] = sheets_metadata[0]["columns"]
                 metadata["rows"] = sheets_metadata[0]["rows"]
 
-        # --- SQLite Database ---
         elif filename.endswith((".db", ".sqlite")):
             conn = sqlite3.connect(file_path)
             cursor = conn.cursor()
@@ -144,7 +133,6 @@ def handle_file_upload(file, save_dir: str, metadata_path: str, context_path: st
                 metadata["columns"] = tables_metadata[0]["columns"]
                 metadata["rows"] = tables_metadata[0]["rows"]
 
-        # --- JSON ---
         elif filename.endswith(".json"):
             with open(file_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -170,7 +158,6 @@ def handle_file_upload(file, save_dir: str, metadata_path: str, context_path: st
         metadata["type"] = "error"
         metadata["error"] = str(e)
 
-    # --- LLM Metadata Enhancement ---
     if metadata["type"] not in ["unknown", "error"]:
         llm_metadata = extract_metadata_with_llm(filename, metadata)
         metadata["llm_insights"] = llm_metadata
@@ -178,7 +165,6 @@ def handle_file_upload(file, save_dir: str, metadata_path: str, context_path: st
         context_text = f"Dataset '{filename}' uploaded: {llm_metadata.get('description', 'No description available')}"
         update_context_from_llm(context_path, context_text, source="file_upload")
 
-    # --- Save metadata ---
     append_dataset_metadata(metadata_path, metadata)
 
     return metadata

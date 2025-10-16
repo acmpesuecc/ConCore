@@ -3,22 +3,10 @@ import tempfile
 import os
 import sys
 
-# Safety configurations
-DEFAULT_TIMEOUT = 30  # Increased for data processing
-MAX_OUTPUT_CHARS = 50000  # Increased for larger outputs
+DEFAULT_TIMEOUT = 30
+MAX_OUTPUT_CHARS = 50000
 
 def run_script_safely(code: str, timeout: int = DEFAULT_TIMEOUT) -> dict:
-    """
-    Execute Python code in a subprocess sandbox.
-    
-    Args:
-        code: Python code to execute
-        timeout: Maximum execution time in seconds
-        
-    Returns:
-        dict with 'stdout' and 'stderr' keys
-    """
-    # Create temporary file with the code
     with tempfile.NamedTemporaryFile(
         delete=False, 
         suffix=".py", 
@@ -29,20 +17,18 @@ def run_script_safely(code: str, timeout: int = DEFAULT_TIMEOUT) -> dict:
         tmp_path = tmp.name
 
     try:
-        # Execute in subprocess with timeout
         result = subprocess.run(
             [sys.executable, tmp_path],
             capture_output=True,
             text=True,
             timeout=timeout,
             check=False,
-            cwd=os.getcwd()  # Use current working directory
+            cwd=os.getcwd()
         )
         
         stdout = (result.stdout or "")[:MAX_OUTPUT_CHARS]
         stderr = (result.stderr or "")[:MAX_OUTPUT_CHARS]
         
-        # Truncation warning
         if len(result.stdout or "") > MAX_OUTPUT_CHARS:
             stdout += f"\n... [Output truncated at {MAX_OUTPUT_CHARS} characters]"
         if len(result.stderr or "") > MAX_OUTPUT_CHARS:
@@ -69,7 +55,6 @@ def run_script_safely(code: str, timeout: int = DEFAULT_TIMEOUT) -> dict:
         }
         
     finally:
-        # Clean up temporary file
         try:
             os.remove(tmp_path)
         except Exception:
