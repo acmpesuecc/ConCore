@@ -1,0 +1,71 @@
+/* ==== GLOBAL RESET ==== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ==== BODY ==== */
+body {
+  font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+  background-color: #f5f6fa;
+  color: #222;
+  line-height: 1.5;
+  padding: 40px 20px;
+}
+
+/* ==== CONTAINER ==== */
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease-in-out;
+}
+
+.container:hover {
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.08);
+}
+
+/* ==== HEADINGS ==== */
+h1 { font-size: 1.8rem; text-align: center; font-weight: 600; color: #111; margin-bottom: 1rem; }
+h3 { font-size: 1.1rem; margin-top: 2rem; margin-bottom: 0.5rem; color: #333; border-left: 4px solid #2b7cff; padding-left: 8px; }
+
+/* ==== FORMS ==== */
+form, textarea, button { width: 100%; }
+label { font-size: 0.9rem; color: #444; }
+input[type="file"] { display: block; margin-top: 0.5rem; margin-bottom: 0.5rem; border: 1px solid #ccc; border-radius: 6px; padding: 6px; width: 100%; }
+
+/* ==== TEXTAREA ==== */
+textarea { resize: vertical; padding: 10px; border-radius: 8px; border: 1px solid #ddd; min-height: 120px; font-size: 0.95rem; margin-top: 0.5rem; transition: border 0.2s ease; }
+textarea:focus { outline: none; border-color: #2b7cff; box-shadow: 0 0 0 2px rgba(43, 124, 255, 0.15); }
+
+/* ==== BUTTONS ==== */
+button { background-color: #2b7cff; color: white; font-weight: 500; border: none; border-radius: 6px; padding: 10px 14px; cursor: pointer; transition: background 0.2s ease, transform 0.1s ease; margin-top: 10px; }
+button:hover { background-color: #1f64d8; transform: translateY(-1px); }
+button:active { transform: translateY(0); }
+
+/* ==== OUTPUT AREA ==== */
+#output { margin-top: 1rem; background: #f8f9fb; border: 1px solid #e2e5ec; border-radius: 8px; padding: 12px; font-family: 'Fira Code', monospace; font-size: 0.9rem; color: #222; white-space: pre-wrap; overflow-y: auto; max-height: 400px; transition: all 0.3s ease-in-out; }
+#output.loading::after { content: "Processing CoTAS steps..."; display: block; font-style: italic; color: #777; text-align: center; }
+
+/* ==== COLLAPSIBLE STEPS ==== */
+.step-block { margin-bottom: 10px; border-left: 3px solid #ccc; padding-left: 10px; }
+.step-header { cursor: pointer; font-weight: 500; margin-bottom: 2px; }
+.step-content { display: none; padding-left: 10px; white-space: pre-wrap; }
+
+/* ==== OUTPUT COLORS ==== */
+#output .think { color: #2b7cff; }
+#output .search { color: #1abc9c; }
+#output .act { color: #ff9800; }
+#output .insight { color: #4caf50; font-weight: 500; }
+#output .error { color: #e53935; font-weight: 500; }
+
+/* ==== RESPONSIVE ==== */
+@media (max-width: 600px) {
+  body { padding: 20px; }
+  .container { padding: 20px; }
+  h1 { font-size: 1.4rem; }
+}
