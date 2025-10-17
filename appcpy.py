@@ -1,67 +1,17 @@
 from flask import Flask, render_template, request, jsonify, Response
 import os
-import json
-import requests
-from typing import Iterator, Union
 import uuid
 from tools.llm.llm_client import get_llm_client
 from tools.data_ingestion.parser import handle_file_upload
 from tools.context_management.context_handler import read_context, write_context, update_context_from_llm
 from tools.llm.orchestrator import process_user_message, cotas_generate_insights
+
 _llm_client = get_llm_client()
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB max file size
 
 BASE_STORAGE = "storage"
-
-class OllamaClient:
-
-
-    def __init__(self, model: str = "gemma3", base_url: str = "http://localhost:11434", timeout: int = 30):
-        self.model = model
-        self.base_url = base_url.rstrip("/")
-        self.timeout = int(os.getenv("OLLAMA_TIMEOUT", timeout))
-
-    def generate(self, prompt: str, max_tokens: int = 512, temperature: float = 0.0, stream: bool = False) -> Union[str, Iterator[str]]:
-
-        url = f"{self.base_url}/api/generate"
-        payload = {
-            "model": self.model,
-            "prompt": prompt,
-            "max_tokens": max_tokens,
-            "temperature": temperature
-        }
-
-        if stream:
-            # request with stream=True and yield decoded lines
-            with requests.post(url, json=payload, stream=True, timeout=self.timeout) as resp:
-                resp.raise_for_status()
-                for chunk in resp.iter_lines(decode_unicode=True):
-                    if not chunk:
-                        continue
-                    # Ollama streaming may return JSON lines; try to parse or pass raw
-                    try:
-                        data = json.loads(chunk)
-                        # adapt depending on actual response format; here we try to extract text
-                        text = data.get("completion") or data.get("text") or data.get("output") or chunk
-                    except Exception:
-                        text = chunk
-                    yield text
-        else:
-            resp = requests.post(url, json=payload, timeout=self.timeout)
-            resp.raise_for_status()
-            data = resp.json()
-            # try common fields; adapt if your Ollama build returns a different shape
-            text = None
-            if isinstance(data, dict):
-                text = data.get("completion") or data.get("text") or data.get("output")
-                if text is None:
-                    # fallback to stringify the object
-                    text = json.dumps(data)
-            else:
-                text = str(data)
-            return text
 
 def _call_llm(prompt: str, max_tokens: int = 512, temperature: float = 0.0, stream: bool = False):
     """
