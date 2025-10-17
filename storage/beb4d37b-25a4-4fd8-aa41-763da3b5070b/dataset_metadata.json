@@ -1,0 +1,64 @@
+{
+  "datasets": [
+    {
+      "filename": "sample_sales_data.csv",
+      "file_path": "storage\\beb4d37b-25a4-4fd8-aa41-763da3b5070b\\datasets\\sample_sales_data.csv",
+      "upload_timestamp": 1760630932,
+      "columns": [
+        "Date",
+        "Product",
+        "Region",
+        "Sales_Rep",
+        "Units_Sold",
+        "Revenue",
+        "Discount"
+      ],
+      "rows": 200,
+      "type": "csv",
+      "size_bytes": 9400,
+      "dtypes": {
+        "Date": "object",
+        "Product": "object",
+        "Region": "object",
+        "Sales_Rep": "object",
+        "Units_Sold": "int64",
+        "Revenue": "float64",
+        "Discount": "float64"
+      },
+      "sample_data": [
+        {
+          "Date": "2025-01-01",
+          "Product": "Monitor",
+          "Region": "West",
+          "Sales_Rep": "Alice",
+          "Units_Sold": 26,
+          "Revenue": 2791.14,
+          "Discount": 0.28
+        },
+        {
+          "Date": "2025-01-08",
+          "Product": "Monitor",
+          "Region": "West",
+          "Sales_Rep": "Alice",
+          "Units_Sold": 42,
+          "Revenue": 5418.47,
+          "Discount": 0.18
+        },
+        {
+          "Date": "2025-01-15",
+          "Product": "Tablet",
+          "Region": "North",
+          "Sales_Rep": "Alice",
+          "Units_Sold": 5,
+          "Revenue": 8948.68,
+          "Discount": 0.24
+        }
+      ],
+      "llm_insights": {
+        "description": "Metadata extraction failed",
+        "error": "404 models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods."
+      }
+    }
+  ],
+  "last_updated": 1760630933
+}

@@ -1,0 +1,8 @@
+=== STDOUT ===
+
+
+=== STDERR ===
+  File "C:\Users\rehaa\AppData\Local\Temp\tmpqaufxzvb.py", line 1
+    pip install matplotlib
+        ^^^^^^^
+SyntaxError: invalid syntax
