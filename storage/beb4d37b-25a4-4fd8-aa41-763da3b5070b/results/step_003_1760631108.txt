@@ -1,8 +1,0 @@
-=== STDOUT ===
-
-
-=== STDERR ===
-Traceback (most recent call last):
-  File "C:\Users\rehaa\AppData\Local\Temp\tmpexss5v7r.py", line 2, in <module>
-    import matplotlib.pyplot as plt
-ModuleNotFoundError: No module named 'matplotlib'
