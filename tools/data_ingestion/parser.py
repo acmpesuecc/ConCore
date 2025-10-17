@@ -10,11 +10,11 @@ import google.generativeai as genai
 from tools.context_management.context_handler import append_dataset_metadata, update_context_from_llm
 
 load_dotenv()
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 
 def extract_metadata_with_llm(filename: str, basic_metadata: Dict[str, Any]) -> Dict[str, Any]:
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-2.5-flash")
 
     prompt = f"""Analyze this dataset metadata and provide rich context:
 
