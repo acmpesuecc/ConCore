@@ -17,7 +17,9 @@
 - **Flask** – API framework
 - **Python 3.8+** – Core programming language
 - **Google Gemini API (gemini-2.5-flash)** – LLM for orchestration
-- **Pandas** – Data processing
+- **Pandas / NumPy / SciPy** – Data manipulation and computation
+- **scikit-learn / statsmodels** – Machine learning and statistics
+- **Matplotlib / Seaborn / Plotly** – Data visualization
 - **SQLite3** – Handles database files
 
 ### Frontend
