@@ -10,6 +10,7 @@ from tools.context_management.context_handler import (
     update_context_from_llm
 )
 from tools.script_executor.sandbox import run_script_safely
+from tools.google_search.search import search_web, format_search_results
 
 load_dotenv()
 api_key = os.getenv("GOOGLE_API_KEY")
@@ -38,12 +39,16 @@ TASK: Analyze this message and respond with a JSON object containing:
 1. "response" - Your conversational response to the user
 2. "context_update" - Any important information to add to context (company info, goals, constraints, etc.) or null if nothing to add
 3. "needs_analysis" - Boolean indicating if this requires data analysis
+4. "needs_search" - Boolean indicating if this requires web search for external information
+5. "search_query" - If needs_search is true, provide the search query (otherwise null)
 
 Example output:
 {{
-  "response": "I understand you want to analyze sales trends. I'll help you with that.",
-  "context_update": "User wants to analyze quarterly sales trends with focus on regional performance",
-  "needs_analysis": true
+  "response": "I'll search for industry benchmarks and help you understand the trends.",
+  "context_update": "User wants industry benchmark comparison",
+  "needs_analysis": false,
+  "needs_search": true,
+  "search_query": "customer retention industry benchmarks 2024"
 }}
 
 Respond with ONLY valid JSON, no additional text."""
@@ -60,6 +65,21 @@ Respond with ONLY valid JSON, no additional text."""
             response_text = response_text.split("```")[1].split("```")[0].strip()
         
         result = json.loads(response_text)
+        
+        search_results = None
+        if result.get("needs_search") and result.get("search_query"):
+            search_data = search_web(result["search_query"], num_results=5)
+            search_results = {
+                "query": result["search_query"],
+                "results": search_data.get("results", []),
+                "formatted": format_search_results(search_data)
+            }
+            
+            if search_data.get("results"):
+                search_context = f"Web search results for '{result['search_query']}':\n"
+                for i, r in enumerate(search_data["results"][:3], 1):
+                    search_context += f"{i}. {r['title']}: {r['snippet']}\n"
+                result["response"] += f"\n\n🔍 Found {len(search_data['results'])} results. See details below."
         
         if result.get("context_update"):
             update_context_from_llm(
@@ -78,13 +98,15 @@ Respond with ONLY valid JSON, no additional text."""
             "role": "assistant",
             "message": result.get("response", ""),
             "context_update": result.get("context_update"),
+            "search_results": search_results,
             "timestamp": int(time.time())
         })
         
         return {
             "response": result.get("response", "I'm processing your message."),
             "needs_analysis": result.get("needs_analysis", False),
-            "context_updated": result.get("context_update") is not None
+            "context_updated": result.get("context_update") is not None,
+            "search_results": search_results
         }
         
     except Exception as e:
@@ -143,7 +165,11 @@ Decide the next action to move towards the goal. Choose ONE:
    IMPORTANT: Code must be complete and runnable. Include all imports.
    Available data paths: storage/<session_id>/datasets/<filename>
 
-3. DONE - Analysis complete, ready to provide final insights
+3. SEARCH - Search the web for external information, benchmarks, or validation
+   Use when: You need factual data, trends, benchmarks, or external context
+   Provide a clear search query
+
+4. DONE - Analysis complete, ready to provide final insights
    Use when: Goal is achieved and you have comprehensive findings
 
 Respond with ONLY valid JSON in this EXACT format:
@@ -160,6 +186,14 @@ OR
   "action": "ACT",
   "content": "import pandas as pd\\nimport matplotlib.pyplot as plt\\n# Complete Python code",
   "context_update": "What this analysis aims to discover" or null
+}}
+
+OR
+
+{{
+  "action": "SEARCH",
+  "content": "search query here",
+  "context_update": "Why this search is needed" or null
 }}
 
 OR
@@ -317,6 +351,37 @@ Respond with only the insight text, no formatting."""
                 "stdout": stdout,
                 "stderr": stderr,
                 "insight": insight,
+                "context_updated": context_update is not None
+            })
+        
+        elif action == "SEARCH":
+            yield json.dumps({
+                "type": "search_start",
+                "step": step,
+                "query": content
+            })
+            
+            search_result = search_web(content, num_results=5)
+            formatted_results = format_search_results(search_result)
+            
+            entry = {
+                "step": step,
+                "action": "SEARCH",
+                "query": content,
+                "results": search_result.get("results", []),
+                "context_update": context_update,
+                "timestamp": timestamp
+            }
+            cotas_log["steps"].append(entry)
+            
+            last_output = formatted_results
+            
+            yield json.dumps({
+                "type": "search_complete",
+                "step": step,
+                "query": content,
+                "results": search_result.get("results", []),
+                "formatted": formatted_results,
                 "context_updated": context_update is not None
             })
         
