@@ -443,6 +443,11 @@
         
         if (response.ok) {
           addAssistantMessage(data.response);
+          
+          if (data.search_results && data.search_results.results.length > 0) {
+            addSearchResults(data.search_results);
+          }
+          
           if (data.context_updated) {
             addSystemMessage('Context updated with important information');
           }
@@ -535,6 +540,20 @@
           content = `<div class="step">✓ Step ${update.step}: Completed</div><div class="content">${update.insight}</div>`;
           if (update.stdout) content += `<br><strong>Output:</strong><pre>${update.stdout.substring(0, 500)}</pre>`;
           break;
+        case 'search_start':
+          content = `<div class="step">🔍 Step ${update.step}: SEARCH</div><div class="content">Searching: <em>${update.query}</em></div>`;
+          break;
+        case 'search_complete':
+          content = `<div class="step">✓ Step ${update.step}: Search Complete</div><div class="content"><strong>Found ${update.results.length} results</strong></div>`;
+          if (update.results && update.results.length > 0) {
+            content += '<div style="background: #f0f8ff; padding: 10px; margin-top: 10px; border-left: 3px solid #667eea; border-radius: 4px;">';
+            content += '<strong>🌐 Web Results:</strong><ul style="margin: 5px 0; padding-left: 20px;">';
+            update.results.slice(0, 3).forEach(r => {
+              content += `<li style="margin: 8px 0;"><a href="${r.link}" target="_blank" style="color: #667eea; font-weight: 600;">${r.title}</a><br><small style="color: #666;">${r.snippet}</small></li>`;
+            });
+            content += '</ul></div>';
+          }
+          break;
         case 'done':
           content = `<div class="step">🎯 FINAL INSIGHT</div><div class="content">${update.final_insight}</div>`;
           break;
@@ -564,6 +583,26 @@
       msg.className = 'message assistant';
       msg.textContent = text;
       chatBox.appendChild(msg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+    
+    function addSearchResults(searchData) {
+      const searchBox = document.createElement('div');
+      searchBox.className = 'message assistant';
+      searchBox.style.background = '#f0f8ff';
+      searchBox.style.borderLeft = '3px solid #667eea';
+      
+      let html = `<strong>🔍 Web Search Results for "${searchData.query}":</strong><br><br>`;
+      
+      searchData.results.forEach((result, index) => {
+        html += `<div style="margin-bottom: 12px;">
+          <strong>${index + 1}. <a href="${result.link}" target="_blank" style="color: #667eea;">${result.title}</a></strong><br>
+          <small style="color: #666;">${result.snippet}</small>
+        </div>`;
+      });
+      
+      searchBox.innerHTML = html;
+      chatBox.appendChild(searchBox);
       chatBox.scrollTop = chatBox.scrollHeight;
     }
     
